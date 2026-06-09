@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khang Anime Hub - Test Archive</title>
+  <!-- Nhúng thư viện Artplayer (Mã nguồn mở) -->
+  <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0b0c10;
+      --bg-card: #1f2833;
+      --neon-cyan: #00ffaa;
+      --text-main: #c5c6c7;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      margin-bottom: 30px;
+      font-size: 14px;
+      color: #66fcf1;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+    /* Giao diện Player */
+    #player-section {
+      background: var(--bg-card);
+      border: 2px solid var(--neon-cyan);
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.15);
+      margin-bottom: 20px;
+    }
+    #artplayer-container {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .player-info {
+      margin-top: 15px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+    }
+    /* Danh sách tập phim */
+    .episodes-box {
+      margin-top: 15px;
+    }
+    .ep-title {
+      font-size: 14px;
+      color: #858585;
+      margin-bottom: 10px;
+    }
+    .ep-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .ep-btn {
+      background: #151a21;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .ep-btn:hover {
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+    .ep-btn.active {
+      background: var(--neon-cyan);
+      color: #000;
+      border-color: var(--neon-cyan);
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>KHANG ANIME HUB</h1>
+  <div class="subtitle">Hệ thống phát thử nghiệm từ nguồn Archive.org vĩnh viễn</div>
+
+  <div class="container">
+    <!-- Khu vực hiển thị Trình phát Video -->
+    <div id="player-section">
+      <div id="artplayer-container"></div>
+      
+      <div class="player-info">
+        Đang phát: <span id="current-anime-title">Dự Án Thử Nghiệm Archive</span> — <span id="current-ep-name">Tập 01 (Test)</span>
+      </div>
+
+      <!-- Khu vực bấm chọn tập -->
+      <div class="episodes-box">
+        <div class="ep-title">DANH SÁCH TẬP PHIM:</div>
+        <div class="ep-buttons" id="ep-list-container">
+          <!-- Các nút tập phim sẽ tự động sinh ra ở đây bằng JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Cấu hình dữ liệu phim và link trực tiếp từ Archive của Khang
+    const animeData = {
+      title: 'Dự Án Thử Nghiệm Archive',
+      episodes: [
+        { 
+          name: 'Tập 01 (Test)', 
+          url: 'https://.archive.org/download/pix-verse-v-6-image-text-540-p-create-a-video-fea/PixVerse_V6_Image_Text_540P_Create_a_video_fea.mp4' 
+        },
+        { 
+          name: 'Tập 02 (Trống)', 
+          url: '' 
+        },
+        { 
+          name: 'Tập 03 (Trống)', 
+          url: '' 
+        }
+      ]
+    };
+
+    let art = null;
+
+    // 2. Hàm tạo các nút bấm chọn tập phim dựa trên dữ liệu trên
+    function initEpisodeButtons() {
+      const container = document.getElementById('ep-list-container');
+      container.innerHTML = '';
+
+      animeData.episodes.forEach((ep, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'ep-btn';
+        btn.textContent = ep.name;
+        
+        // Nếu tập phim không có link, làm mờ đi và không cho bấm
+        if (!ep.url) {
+          btn.style.opacity = '0.4';
+          btn.style.cursor = 'not-allowed';
+          btn.title = 'Tập này chưa được cập nhật link';
+        } else {
+          btn.onclick = () => playEpisode(index);
+        }
+        
+        btn.id = 'ep-btn-' + index;
+        container.appendChild(btn);
+      });
+    }
+
+    // 3. Hàm xử lý phát video khi bấm vào tập
+    function playEpisode(index) {
+      const ep = animeData.episodes[index];
+      if (!ep || !ep.url) return;
+
+      // Cập nhật chữ hiển thị tên tập đang phát trên giao diện
+      document.getElementById('current-ep-name').textContent = ep.name;
+
+      // Đổi trạng thái màu sắc Active cho nút vừa bấm
+      document.querySelectorAll('.ep-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('ep-btn-' + index).classList.add('active');
+
+      // Nếu đang có một player chạy, hủy nó đi để tạo cái mới giải phóng bộ nhớ
+      if (art) {
+        art.destroy();
+        art = null;
+      }
+
+      // KHỞI TẠO ARTPLAYER CHUẨN (Chữ p viết thường để tránh lỗi ReferenceError)
+      art = new Artplayer({
+        container: '#artplayer-container',
+        url: ep.url, // Nhận link trực tiếp từ Archive.org
+        autoplay: true, // Tự động phát khi bấm tập
+        volume: 0.6,
+        setting: true, // Hiện menu cài đặt răng cưa
+        fullscreen: true, // Hỗ trợ phóng to hết màn hình
+        fullscreenWeb: true, // Phóng to tràn trình duyệt
+        playbackRate: true, // Tốc độ tua phim nhanh/chậm
+        aspectRatio: true, // Tỉ lệ màn hình (16:9, 4:3)
+        theme: '#00ffaa', // Màu neon đồng bộ giao diện
+        moreVideoAttr: {
+          crossOrigin: 'anonymous', // Bỏ qua lỗi CORS của trình duyệt
+        }
+      });
+    }
+
+    // 4. Lệnh chạy đầu tiên khi mở trang web lên
+    window.onload = () => {
+      initEpisodeButtons();
+      // Mặc định tự động phát tập 01 đầu tiên khi trang vừa tải xong
+      playEpisode(0);
+    };
+  </script>
+
+</body>
+</html>
