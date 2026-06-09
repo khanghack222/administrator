@@ -120,13 +120,14 @@
   </div>
 
   <script>
-    // 1. Cấu hình dữ liệu phim và link trực tiếp từ Archive của Khang
+    // 1. Cấu hình dữ liệu phim và sửa lại link chuẩn của Khang
     const animeData = {
       title: 'Dự Án Thử Nghiệm Archive',
       episodes: [
         { 
           name: 'Tập 01 (Test)', 
-          url: 'https://.archive.org/download/pix-verse-v-6-image-text-540-p-create-a-video-fea/PixVerse_V6_Image_Text_540P_Create_a_video_fea.mp4' 
+          // ĐÃ SỬA: Sửa lỗi gõ nhầm ".archive.org" thành link chính xác 100%
+          url: 'https://archive.org/download/pix-verse-v-6-image-text-540-p-create-a-video-fea/PixVerse_V6_Image_Text_540P_Create_a_video_fea.mp4' 
         },
         { 
           name: 'Tập 02 (Trống)', 
@@ -183,20 +184,28 @@
         art = null;
       }
 
-      // KHỞI TẠO ARTPLAYER CHUẨN (Chữ p viết thường để tránh lỗi ReferenceError)
+      // TỰ ĐỘNG KIỂM TRA MÔI TRƯỜNG CHẠY OFFLINE ĐỂ VƯỢT CORS
+      let finalUrl = ep.url;
+      if (window.location.protocol === 'file:') {
+        // Nếu mở file từ máy tính (file:///), bọc qua proxy cors-anywhere để lách lỗi CORS ngay lập tức
+        finalUrl = 'https://cors-anywhere.herokuapp.com/' + ep.url;
+        console.log("Đang chạy offline, tự động kích hoạt Proxy CORS để test phim!");
+      }
+
+      // KHỞI TẠO ARTPLAYER CHUẨN VỚI LINK ĐÃ ĐƯỢC TỐI ƯU
       art = new Artplayer({
         container: '#artplayer-container',
-        url: ep.url, // Nhận link trực tiếp từ Archive.org
-        autoplay: true, // Tự động phát khi bấm tập
+        url: finalUrl, 
+        autoplay: true, 
         volume: 0.6,
-        setting: true, // Hiện menu cài đặt răng cưa
-        fullscreen: true, // Hỗ trợ phóng to hết màn hình
-        fullscreenWeb: true, // Phóng to tràn trình duyệt
-        playbackRate: true, // Tốc độ tua phim nhanh/chậm
-        aspectRatio: true, // Tỉ lệ màn hình (16:9, 4:3)
-        theme: '#00ffaa', // Màu neon đồng bộ giao diện
+        setting: true, 
+        fullscreen: true, 
+        fullscreenWeb: true, 
+        playbackRate: true, 
+        aspectRatio: true, 
+        theme: '#00ffaa', 
         moreVideoAttr: {
-          crossOrigin: 'anonymous', // Bỏ qua lỗi CORS của trình duyệt
+          crossOrigin: 'anonymous',
         }
       });
     }
