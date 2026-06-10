@@ -1,222 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Khang Anime Hub - Test Archive</title>
-  <!-- Nhúng thư viện Artplayer (Mã nguồn mở) -->
-  <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drive Video Player</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3/dist/plyr.css" />
   <style>
-    :root {
-      --bg-dark: #0b0c10;
-      --bg-card: #1f2833;
-      --neon-cyan: #00ffaa;
-      --text-main: #c5c6c7;
-    }
-    body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      color: var(--neon-cyan);
-      text-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
-      margin-bottom: 5px;
-    }
-    .subtitle {
-      margin-bottom: 30px;
-      font-size: 14px;
-      color: #66fcf1;
-    }
-    .container {
-      width: 100%;
-      max-width: 900px;
-    }
-    /* Giao diện Player */
-    #player-section {
-      background: var(--bg-card);
-      border: 2px solid var(--neon-cyan);
-      border-radius: 12px;
-      padding: 15px;
-      box-shadow: 0 0 20px rgba(0, 255, 170, 0.15);
-      margin-bottom: 20px;
-    }
-    #artplayer-container {
-      width: 100%;
-      aspect-ratio: 16/9;
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .player-info {
-      margin-top: 15px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #fff;
-    }
-    /* Danh sách tập phim */
-    .episodes-box {
-      margin-top: 15px;
-    }
-    .ep-title {
-      font-size: 14px;
-      color: #858585;
-      margin-bottom: 10px;
-    }
-    .ep-buttons {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .ep-btn {
-      background: #151a21;
-      border: 1px solid #333;
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .ep-btn:hover {
-      border-color: var(--neon-cyan);
-      color: var(--neon-cyan);
-    }
-    .ep-btn.active {
-      background: var(--neon-cyan);
-      color: #000;
-      border-color: var(--neon-cyan);
-      font-weight: bold;
-      box-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
-    }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    .box { margin-bottom: 12px; }
+    video { width: 100%; height: auto; }
+    input { width: 100%; padding: 10px; font-size: 14px; }
+    .hint { color: #444; font-size: 13px; }
   </style>
 </head>
+
 <body>
+  <div class="wrap">
+    <h2>Player (Google Drive → Cloudflare Worker → Plyr)</h2>
 
-  <h1>KHANG ANIME HUB</h1>
-  <div class="subtitle">Hệ thống phát thử nghiệm từ nguồn Archive.org vĩnh viễn</div>
-
-  <div class="container">
-    <!-- Khu vực hiển thị Trình phát Video -->
-    <div id="player-section">
-      <div id="artplayer-container"></div>
-      
-      <div class="player-info">
-        Đang phát: <span id="current-anime-title">Dự Án Thử Nghiệm Archive</span> — <span id="current-ep-name">Tập 01 (Test)</span>
+    <div class="box">
+      <div class="hint">
+        Dán FILE_ID Drive vào đây (hoặc mở link dạng <code>?id=FILE_ID</code>).
       </div>
-
-      <!-- Khu vực bấm chọn tập -->
-      <div class="episodes-box">
-        <div class="ep-title">DANH SÁCH TẬP PHIM:</div>
-        <div class="ep-buttons" id="ep-list-container">
-          <!-- Các nút tập phim sẽ tự động sinh ra ở đây bằng JavaScript -->
-        </div>
-      </div>
+      <input id="fileId" value="1fns6qwzKEIDzTKPKCqOpjIu2Ppq_CzYo" />
     </div>
+
+    <video id="player" playsinline controls preload="metadata"></video>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/plyr@3/dist/plyr.polyfilled.js"></script>
   <script>
-    // 1. Cấu hình dữ liệu phim và sửa lại link chuẩn của Khang
-    const animeData = {
-      title: 'Dự Án Thử Nghiệm Archive',
-      episodes: [
-        { 
-          name: 'Tập 01 (Test)', 
-          // ĐÃ SỬA: Sửa lỗi gõ nhầm ".archive.org" thành link chính xác 100%
-          url: 'https://archive.org/download/pix-verse-v-6-image-text-540-p-create-a-video-fea/PixVerse_V6_Image_Text_540P_Create_a_video_fea.mp4' 
-        },
-        { 
-          name: 'Tập 02 (Trống)', 
-          url: '' 
-        },
-        { 
-          name: 'Tập 03 (Trống)', 
-          url: '' 
-        }
-      ]
-    };
+    const WORKER_BASE = "https://super-rice-0e66.kieuxuan257.workers.dev";
 
-    let art = null;
+    const input = document.getElementById("fileId");
+    const video = document.getElementById("player");
+    const plyr = new Plyr(video);
 
-    // 2. Hàm tạo các nút bấm chọn tập phim dựa trên dữ liệu trên
-    function initEpisodeButtons() {
-      const container = document.getElementById('ep-list-container');
-      container.innerHTML = '';
+    function setFromId(id) {
+      const clean = (id || "").trim();
+      if (!clean) return;
 
-      animeData.episodes.forEach((ep, index) => {
-        const btn = document.createElement('button');
-        btn.className = 'ep-btn';
-        btn.textContent = ep.name;
-        
-        // Nếu tập phim không có link, làm mờ đi và không cho bấm
-        if (!ep.url) {
-          btn.style.opacity = '0.4';
-          btn.style.cursor = 'not-allowed';
-          btn.title = 'Tập này chưa được cập nhật link';
-        } else {
-          btn.onclick = () => playEpisode(index);
-        }
-        
-        btn.id = 'ep-btn-' + index;
-        container.appendChild(btn);
-      });
+      const src = `${WORKER_BASE}/${encodeURIComponent(clean)}`;
+
+      // set source cho Plyr
+      plyr.source = {
+        type: "video",
+        sources: [{ src, type: "video/mp4" }]
+      };
+
+      // update URL để bạn share lại cho người khác
+      const u = new URL(location.href);
+      u.searchParams.set("id", clean);
+      history.replaceState(null, "", u.toString());
     }
 
-    // 3. Hàm xử lý phát video khi bấm vào tập
-    function playEpisode(index) {
-      const ep = animeData.episodes[index];
-      if (!ep || !ep.url) return;
+    // Lấy id từ query ?id=...
+    const params = new URLSearchParams(location.search);
+    const idFromUrl = params.get("id");
+    if (idFromUrl) input.value = idFromUrl;
 
-      // Cập nhật chữ hiển thị tên tập đang phát trên giao diện
-      document.getElementById('current-ep-name').textContent = ep.name;
+    setFromId(input.value);
 
-      // Đổi trạng thái màu sắc Active cho nút vừa bấm
-      document.querySelectorAll('.ep-btn').forEach(btn => btn.classList.remove('active'));
-      document.getElementById('ep-btn-' + index).classList.add('active');
-
-      // Nếu đang có một player chạy, hủy nó đi để tạo cái mới giải phóng bộ nhớ
-      if (art) {
-        art.destroy();
-        art = null;
-      }
-
-      // TỰ ĐỘNG KIỂM TRA MÔI TRƯỜNG CHẠY OFFLINE ĐỂ VƯỢT CORS
-      let finalUrl = ep.url;
-      if (window.location.protocol === 'file:') {
-        // Nếu mở file từ máy tính (file:///), bọc qua proxy cors-anywhere để lách lỗi CORS ngay lập tức
-        finalUrl = 'https://cors-anywhere.herokuapp.com/' + ep.url;
-        console.log("Đang chạy offline, tự động kích hoạt Proxy CORS để test phim!");
-      }
-
-      // KHỞI TẠO ARTPLAYER CHUẨN VỚI LINK ĐÃ ĐƯỢC TỐI ƯU
-      art = new Artplayer({
-        container: '#artplayer-container',
-        url: finalUrl, 
-        autoplay: true, 
-        volume: 0.6,
-        setting: true, 
-        fullscreen: true, 
-        fullscreenWeb: true, 
-        playbackRate: true, 
-        aspectRatio: true, 
-        theme: '#00ffaa', 
-        moreVideoAttr: {
-          crossOrigin: 'anonymous',
-        }
-      });
-    }
-
-    // 4. Lệnh chạy đầu tiên khi mở trang web lên
-    window.onload = () => {
-      initEpisodeButtons();
-      // Mặc định tự động phát tập 01 đầu tiên khi trang vừa tải xong
-      playEpisode(0);
-    };
+    input.addEventListener("change", () => setFromId(input.value));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") setFromId(input.value);
+    });
   </script>
-
 </body>
 </html>
