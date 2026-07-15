@@ -1,7 +1,0 @@
-# secrets & local data
-config.json
-acc/
-getedumail-latest.json
-getedumail-api-test-last.json
-*.log
-node_modules/
