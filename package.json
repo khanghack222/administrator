@@ -1,0 +1,25 @@
+{
+  "name": "getedumail-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "edu": "node mail/getedumail-menu.mjs",
+    "edu:create": "node mail/getedumail-auto.mjs --no-open",
+    "edu:login": "node mail/getedumail-auto.mjs --login",
+    "edu:batch": "node mail/getedumail-auto.mjs --count 3 --no-open",
+    "grok:menu": "node grok/grok-menu.mjs",
+    "bridge": "node grok/bridge-server.mjs",
+    "grok": "node grok/reg-grok.mjs",
+    "grok:fresh": "node grok/reg-grok.mjs --fresh",
+    "grok:reuse": "node grok/reg-grok.mjs --reuse",
+    "grok:user": "node grok/reg-grok.mjs --fresh --user-chrome",
+    "grok:user:reuse": "node grok/reg-grok.mjs --reuse --user-chrome",
+    "grok:multi": "node grok/reg-multi.mjs",
+    "proxy:test": "node grok/proxy.mjs --test",
+    "proxy:pick": "node grok/proxy.mjs --pick",
+    "nopecha:setup": "node grok/nopecha.mjs --setup"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0"
+  }
+}

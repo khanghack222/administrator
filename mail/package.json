@@ -1,0 +1,20 @@
+{
+  "name": "getedumail-cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CLI to create & manage GetEduMail edu addresses (API + optional Chrome login)",
+  "scripts": {
+    "start": "node getedumail-menu.mjs",
+    "menu": "node getedumail-menu.mjs",
+    "create": "node getedumail-auto.mjs --no-open",
+    "login": "node getedumail-auto.mjs --login",
+    "batch": "node getedumail-auto.mjs --count 3 --no-open"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0"
+  }
+}
