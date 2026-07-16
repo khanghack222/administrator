@@ -79,14 +79,27 @@ export async function loginForToken(email, password) {
   const r = await api("POST", "/getedumail/user/login", {
     body: { email, password },
   });
-  if (!r.ok) return null;
+  if (!r.ok) {
+    const reason = r.json?.message || r.json?.error || r.text?.slice(0, 200) || `HTTP ${r.status}`;
+    throw new Error(`login ${r.status}: ${reason}`);
+  }
   return r.json?.userToken || null;
+}
+
+export function accountLoginEmail({ loginEmail, tempEmail, userToken, email } = {}) {
+  if (loginEmail || tempEmail) return loginEmail || tempEmail;
+  try {
+    const payload = JSON.parse(Buffer.from(userToken.split(".")[1], "base64url").toString("utf8"));
+    return payload.email || email;
+  } catch {
+    return email;
+  }
 }
 
 /**
  * Token usable cho inbox list. Ưu tiên saved → login refresh → ghi lại acc nếu có id.
  */
-export async function resolveToken({ email, password, userToken, id } = {}) {
+export async function resolveToken({ email, loginEmail, password, userToken, id } = {}) {
   if (userToken) {
     const probe = await api(
       "GET",
@@ -95,7 +108,10 @@ export async function resolveToken({ email, password, userToken, id } = {}) {
     );
     if (probe.ok) return userToken;
   }
-  const fresh = await loginForToken(email, password);
+  const fresh = await loginForToken(
+    accountLoginEmail({ loginEmail, password, userToken, email }),
+    password
+  );
   if (!fresh) return userToken || null;
   if (id != null) {
     try {
@@ -172,6 +188,7 @@ export async function fetchInbox(email, page = 1, opts = {}) {
   if (!token && (opts.password || opts.id)) {
     token = await resolveToken({
       email,
+      loginEmail: opts.loginEmail,
       password: opts.password,
       userToken: opts.userToken,
       id: opts.id,
@@ -187,6 +204,7 @@ export async function fetchInbox(email, page = 1, opts = {}) {
     if (opts.password) {
       token = await resolveToken({
         email,
+        loginEmail: opts.loginEmail,
         password: opts.password,
         userToken: null,
         id: opts.id,
@@ -219,6 +237,7 @@ export async function fetchInbox(email, page = 1, opts = {}) {
       date: m.date || "",
       bodyRaw: m.body?.text || m.body?.html || "",
       preview: htmlToText(m.body?.text || m.body?.html || "").slice(0, 120),
+      codes: (htmlToText(m.body?.text || m.body?.html || "").match(/\b\d{4,8}\b/g) || []).slice(0, 10),
     })),
   };
 }
@@ -434,6 +453,8 @@ export function slimAcc(a) {
   if (!a) return null;
   return {
     email: a.email,
+    loginEmail: a.loginEmail || a.tempEmail || "",
+    tempEmail: a.tempEmail || "",
     password: a.password,
     fullName: a.fullName || a.name || "",
     userToken: a.userToken || "",
@@ -702,6 +723,7 @@ export async function createAccount(opts = {}) {
   const result = {
     ok: true,
     email: eduEmail,
+    loginEmail: tm.address,
     fullName,
     password,
     code,

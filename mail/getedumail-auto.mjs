@@ -43,7 +43,7 @@ async function main() {
       throw new Error("Không có mail gần nhất kèm mật khẩu");
     }
     const token = await loginForToken(latest.email, latest.password);
-    if (!token) throw new Error("Đăng nhập GetEduMail thất bại");
+    if (!token) throw new Error("Đăng nhập GetEduMail thất bại: server không trả userToken");
     console.log(`Đăng nhập thành công: ${latest.email}`);
     return;
   }
@@ -82,5 +82,5 @@ async function main() {
 
 main().catch((e) => {
   console.error("[LỖI]", e.message || e);
-  process.exit(1);
+  process.exitCode = 1;
 });

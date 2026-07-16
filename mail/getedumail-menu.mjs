@@ -4,7 +4,12 @@ import { spawn } from "child_process";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import { listAccFiles, loadLatest, fetchInbox } from "./getedumail-core.mjs";
+import {
+  listAccFiles,
+  loadLatest,
+  fetchInbox,
+  fetchMailBody,
+} from "./getedumail-core.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const cfgPath = join(__dir, "config.json");
@@ -74,9 +79,15 @@ async function showInbox() {
   try {
     const box = await fetchInbox(latest.email, 1, latest);
     console.log(`\n── HỘP THƯ ${latest.email} (${box.total}) ──`);
+    if (!box.emails.length) return;
     for (const mail of box.emails) {
       console.log(`${mail.index}. ${mail.subject} — ${mail.from}`);
+      if (mail.codes.length) console.log(`   Mã: ${mail.codes.join(", ")}`);
     }
+    const choice = await ask("Xem thư số [Enter bỏ qua]: ");
+    if (!choice) return;
+    const mail = await fetchMailBody(latest.email, choice, latest);
+    console.log(`\n── ${mail.subject} ──\n${mail.bodyText || "(Thư không có nội dung văn bản)"}`);
   } catch (e) {
     console.log(`[LỖI] ${e.message || e}`);
   }
@@ -127,7 +138,8 @@ async function main() {
     } else if (choice === "4") {
       await showInbox();
     } else if (choice === "5") {
-      await runAuto(["--login"]);
+      const code = await runAuto(["--login"]);
+      if (code) console.log("Đăng nhập thất bại. Tài khoản cũ có thể thiếu email đăng nhập gốc.");
     } else if (choice === "9") {
       await editConfig();
     } else {
