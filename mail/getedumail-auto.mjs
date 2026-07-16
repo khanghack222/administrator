@@ -7,7 +7,8 @@ import {
   listAccFiles,
   loadLatest,
   fetchInbox,
-  loginForToken,
+  resolveToken,
+  accountLoginEmail,
 } from "./getedumail-core.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -42,9 +43,10 @@ async function main() {
     if (!latest?.email || !latest.password) {
       throw new Error("Không có mail gần nhất kèm mật khẩu");
     }
-    const token = await loginForToken(latest.email, latest.password);
+    const loginEmail = accountLoginEmail(latest);
+    const token = await resolveToken({ ...latest, loginEmail, userToken: null });
     if (!token) throw new Error("Đăng nhập GetEduMail thất bại: server không trả userToken");
-    console.log(`Đăng nhập thành công: ${latest.email}`);
+    console.log(`Đăng nhập thành công: ${loginEmail}`);
     return;
   }
 
