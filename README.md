@@ -58,6 +58,8 @@ GetEduMail-Tool/
 ├── mail/
 │   ├── config.example.json
 │   ├── config.json                 tệp cục bộ, không đưa lên Git
+│   ├── getedumail-menu.mjs         trình đơn quản lý mail
+│   ├── getedumail-auto.mjs         trình chạy tạo mail và thao tác tự động
 │   ├── getedumail-core.mjs         thư viện API dùng chung
 │   ├── acc/                        tài khoản giáo dục cục bộ
 │   └── getedumail-latest.json      tài khoản gần nhất, không đưa lên Git
@@ -97,9 +99,39 @@ Luồng tạo địa chỉ hiện tại:
 
 Cách dùng hộp thư tạm giúp tránh giới hạn tạo hộp thư khách của GetEduMail. Hộp thư tạm chỉ dùng để nhận mã xác minh GetEduMail; địa chỉ edu sau khi claim mới là địa chỉ dùng cho bước đăng ký Grok.
 
-### 4.2. Tạo mail từ thư viện hiện có
+### 4.2. Trình đơn mail
 
-Bản mã hiện tại chỉ giữ thư viện mail dùng chung. Tạo một địa chỉ edu bằng lệnh sau:
+Mở trình đơn bằng một trong các lệnh:
+
+```powershell
+npm run edu
+.\edu-menu.bat
+```
+
+Trình đơn có các chức năng:
+
+| Lựa chọn | Chức năng |
+|---|---|
+| `1` | Tạo một địa chỉ edu |
+| `2` | Tạo nhiều địa chỉ edu |
+| `3` | Xem danh sách địa chỉ đã lưu |
+| `4` | Xem hộp thư gần nhất |
+| `5` | Đăng nhập lại địa chỉ gần nhất |
+| `9` | Sửa tên miền, tên và mật khẩu mặc định |
+| `0` | Thoát |
+
+### 4.3. Tạo mail bằng dòng lệnh
+
+```powershell
+npm run edu:create
+npm run edu:batch
+node mail/getedumail-auto.mjs --count 5
+node mail/getedumail-auto.mjs --domain iunp.edu.rs
+```
+
+Bản thân `getedumail-auto.mjs` dùng `getedumail-core.mjs`; không cần mở trình duyệt.
+
+### 4.4. Tạo mail bằng thư viện
 
 ```powershell
 node --input-type=module -e "import { createAccount } from './mail/getedumail-core.mjs'; const a=await createAccount({domain:'iunp.edu.rs',log:console.log}); console.log(a.email)"
@@ -109,7 +141,7 @@ Thay `iunp.edu.rs` bằng tên miền còn hiển thị trong giao diện GetEdu
 
 `grok/reg-grok.mjs` tự gọi cùng hàm này khi không tìm thấy mail edu cũ chưa dùng.
 
-### 4.3. Tệp kết quả
+### 4.5. Tệp kết quả
 
 - `mail/acc/N.json`: tài khoản edu thứ `N`.
 - `mail/acc/latest.json`: tài khoản edu gần nhất.
@@ -118,7 +150,7 @@ Thay `iunp.edu.rs` bằng tên miền còn hiển thị trong giao diện GetEdu
 
 Không chia sẻ các tệp này vì chúng có thể chứa mật khẩu, mã truy cập hoặc thông tin hộp thư.
 
-### 4.4. Cấu hình mail
+### 4.6. Cấu hình mail
 
 `mail/config.json`:
 
