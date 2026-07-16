@@ -1,0 +1,23 @@
+{
+  "configSeen": false,
+  "domain": "iunp.edu.rs",
+  "domains": [
+    "iunp.edu.rs",
+    "iitp.edu.rs",
+    "warsawuni.edu.pl"
+  ],
+  "headless": false,
+  "workers": 2,
+  "reuseUnusedEdu": true,
+  "autoClickCaptcha": true,
+  "name": "Alex Kowalski",
+  "password": "",
+  "openBrowserAfterCreate": false,
+  "randomName": true,
+  "proxy": "",
+  "nineRouter": {
+    "autoAuth": false,
+    "baseUrl": "http://127.0.0.1:20128",
+    "namePrefix": "edu-auto"
+  }
+}

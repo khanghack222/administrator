@@ -7,8 +7,9 @@ node_modules/
 **/.env
 **/.env.*
 
-# accounts / results
+# accounts / results / oauth tokens
 **/acc/
+**/xai-oauth*.json
 **/getedumail-latest.json
 **/getedumail-api-test-last.json
 **/*-results.jsonl
@@ -18,9 +19,6 @@ node_modules/
 **/.pw-*/
 **/playwright-report/
 **/test-results/
-
-# NopeCHA extension (local key in manifest; re-run: npm run nopecha:setup)
-grok/ext/
 
 # OS
 .DS_Store
