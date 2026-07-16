@@ -121,7 +121,7 @@ async function main() {
   [2] Tạo nhiều mail edu
   [3] Xem danh sách mail đã lưu
   [4] Xem hộp thư mail gần nhất
-  [5] Đăng nhập lại mail gần nhất
+  [5] Làm mới token và mở trang đăng nhập
   [9] Cấu hình
   [0] Thoát
 `);

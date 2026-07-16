@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { spawn } from "child_process";
+import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import {
@@ -18,6 +19,16 @@ const flag = (name, fallback = null) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
 const count = Math.max(1, parseInt(flag("--count", "1"), 10) || 1);
+const WEB_LOGIN_URL = "https://getedumail.com/login";
+
+function openBrowser(url) {
+  const command = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
+  spawn(command, process.platform === "win32" ? ["", url] : [url], {
+    detached: true,
+    stdio: "ignore",
+    shell: process.platform === "win32",
+  }).unref();
+}
 const cfgPath = join(__dir, "config.json");
 const examplePath = join(__dir, "config.example.json");
 
@@ -46,7 +57,9 @@ async function main() {
     const loginEmail = accountLoginEmail(latest);
     const token = await resolveToken({ ...latest, loginEmail, userToken: null });
     if (!token) throw new Error("Đăng nhập GetEduMail thất bại: server không trả userToken");
-    console.log(`Đăng nhập thành công: ${loginEmail}`);
+    console.log(`Đăng nhập API thành công: ${loginEmail}`);
+    openBrowser(WEB_LOGIN_URL);
+    console.log(`Đã mở trình duyệt: ${WEB_LOGIN_URL}`);
     return;
   }
 
