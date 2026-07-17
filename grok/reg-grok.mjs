@@ -1229,7 +1229,7 @@ async function logoutXai(page, context, logFn = log) {
   // 2) wipe lại sau sign-out (cookie mới có thể set)
   await clearXaiSession(page, context, logFn);
   try {
-    await page.goto("https://accounts.x.ai/sign-in", {
+    await page.goto("https://accounts.x.ai/sign-up", {
       waitUntil: "domcontentloaded",
       timeout: 12_000,
     });

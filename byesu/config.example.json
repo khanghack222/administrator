@@ -1,0 +1,17 @@
+{
+  "headless": false,
+  "workers": 2,
+  "autoClickCaptcha": true,
+  "password": "",
+  "proxy": "",
+  "byesu": {
+    "group": "Grok",
+    "keyName": "",
+    "groupsAllowed": [
+      "Openai Codex",
+      "Grok",
+      "Gemini Business",
+      "Claude Max"
+    ]
+  }
+}

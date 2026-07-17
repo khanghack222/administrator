@@ -9,6 +9,7 @@ node_modules/
 
 # accounts / results / oauth tokens
 **/acc/
+**/keys/
 **/xai-oauth*.json
 **/getedumail-latest.json
 **/getedumail-api-test-last.json

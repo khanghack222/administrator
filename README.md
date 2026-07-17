@@ -1,11 +1,12 @@
 # Công cụ GetEduMail
 
-Bộ công cụ Node.js gồm hai phần:
+Bộ công cụ Node.js gồm ba phần:
 
 - `mail/`: tạo, xác minh và lưu địa chỉ thư điện tử giáo dục GetEduMail.
 - `grok/`: đăng ký tài khoản Grok/xAI bằng địa chỉ giáo dục, xử lý OTP, Cloudflare Turnstile, chạy nhiều luồng và tùy chọn xác thực 9router.
+- `byesu/`: đăng ký tài khoản ByesU (半页酥 API), OTP temp mail, Turnstile, login, tạo API key theo group và lưu key theo file.
 
-Chỉ sử dụng với tài khoản, hộp thư và hạ tầng mà bạn có quyền sử dụng. Tuân thủ điều khoản của GetEduMail, xAI, Cloudflare và 9router.
+Chỉ sử dụng với tài khoản, hộp thư và hạ tầng mà bạn có quyền sử dụng. Tuân thủ điều khoản của GetEduMail, xAI, ByesU, Cloudflare và 9router.
 
 ---
 
@@ -13,12 +14,10 @@ Chỉ sử dụng với tài khoản, hộp thư và hạ tầng mà bạn có q
 
 - Windows.
 - Node.js 18 trở lên.
-- Google Chrome nếu muốn hiện trình duyệt hoặc dùng Chrome người dùng qua CDP.
+- Google Chrome (chế độ CDP / user Chrome).
 - Playwright được cài trong dự án.
-- 9router đang chạy nếu bật xác thực tự động 9router.
-- Kết nối mạng ổn định tới GetEduMail, dịch vụ thư tạm, xAI và 9router.
-
-Kiểm tra phiên bản:
+- 9router đang chạy nếu bật xác thực tự động 9router (phần Grok).
+- Kết nối mạng ổn định tới GetEduMail, dịch vụ thư tạm, xAI, ByesU và 9router.
 
 ```powershell
 node --version
@@ -29,22 +28,19 @@ npm --version
 
 ## 2. Cài đặt
 
-Mở PowerShell tại thư mục dự án:
-
 ```powershell
 cd C:\Users\XUAN\Desktop\GetEduMail-Tool
 npm install
 npx playwright install chrome
 ```
 
-Tạo tệp cấu hình cục bộ từ tệp mẫu:
+Tạo cấu hình cục bộ (không ghi đè nếu đã có):
 
 ```powershell
-Copy-Item grok\config.example.json grok\config.json
 Copy-Item mail\config.example.json mail\config.json
+Copy-Item grok\config.example.json grok\config.json
+Copy-Item byesu\config.example.json byesu\config.json
 ```
-
-Nếu đã có tệp cấu hình, không ghi đè. Chỉnh sửa trực tiếp bằng trình đơn hoặc trình soạn thảo văn bản.
 
 ---
 
@@ -54,556 +50,374 @@ Nếu đã có tệp cấu hình, không ghi đè. Chỉnh sửa trực tiếp b
 GetEduMail-Tool/
 ├── package.json
 ├── README.md
+├── menu.mjs / menu.bat          trình đơn tổng
+├── edu-menu.bat
 ├── grok-menu.bat
+├── byesu-menu.bat
 ├── mail/
-│   ├── config.example.json
-│   ├── config.json                 tệp cục bộ, không đưa lên Git
-│   ├── getedumail-menu.mjs         trình đơn quản lý mail
-│   ├── getedumail-auto.mjs         trình chạy tạo mail và thao tác tự động
-│   ├── getedumail-core.mjs         thư viện API dùng chung
-│   ├── acc/                        tài khoản giáo dục cục bộ
-│   └── getedumail-latest.json      tài khoản gần nhất, không đưa lên Git
-└── grok/
-    ├── config.example.json
-    ├── config.json                 tệp cục bộ, không đưa lên Git
-    ├── grok-menu.mjs               trình đơn đăng ký Grok
-    ├── reg-grok.mjs                đăng ký một tài khoản
-    ├── reg-multi.mjs               chạy nhiều lượt song song
-    ├── reg-grok-once.mjs           luồng đăng ký một lượt cũ
-    ├── turnstile.mjs               xử lý Cloudflare Turnstile
-    ├── proxy.mjs                   đọc và kiểm tra proxy
-    ├── nine-router-auth.mjs        xác thực Grok CLI với 9router
-    ├── acc/                        kết quả Grok và bản sao OAuth cục bộ
-    └── proxies.txt                 danh sách proxy cục bộ, không đưa lên Git
+│   ├── config.json
+│   ├── getedumail-menu.mjs
+│   ├── getedumail-auto.mjs
+│   ├── getedumail-core.mjs
+│   └── acc/
+├── grok/
+│   ├── config.json
+│   ├── grok-menu.mjs
+│   ├── reg-grok.mjs
+│   ├── reg-multi.mjs
+│   ├── turnstile.mjs           Turnstile dùng chung (Grok + ByesU)
+│   ├── proxy.mjs
+│   ├── nine-router-auth.mjs
+│   ├── acc/
+│   └── proxies.txt
+└── byesu/
+    ├── config.json
+    ├── byesu-menu.mjs
+    ├── reg-byesu.mjs
+    ├── tempmail.mjs            tempmail.lol (không mail.tm)
+    ├── byesu-autofill.user.js
+    ├── acc/                    JSON tài khoản reg
+    ├── keys/                   API key txt theo group
+    └── .pw-byesu-profile/      Chrome profile CDP
 ```
 
-`grok/reg-grok.mjs` dùng `mail/getedumail-core.mjs`. Vì vậy phải giữ thư mục `mail/` và `grok/` cạnh nhau theo cấu trúc trên.
+`grok/reg-grok.mjs` dùng `mail/getedumail-core.mjs`.  
+`byesu/reg-byesu.mjs` dùng `grok/turnstile.mjs`, `grok/proxy.mjs` và `mail/getedumail-core.mjs` (extract OTP / randUser).
 
 ---
 
 ## 4. Phần mail: GetEduMail
 
-### 4.1. Luồng hoạt động
-
-Luồng tạo địa chỉ hiện tại:
+### 4.1. Luồng
 
 ```text
-1. Tạo hộp thư tạm qua mail.tm
-2. Đăng ký tài khoản GetEduMail bằng hộp thư tạm
-3. Gửi mã xác minh GetEduMail
-4. Đọc mã từ hộp thư tạm
-5. Xác minh tài khoản GetEduMail
-6. Nhận quyền sở hữu địa chỉ edu theo tên miền đã chọn
-7. Lưu địa chỉ và mã truy cập cục bộ
+1. Tạo hộp thư tạm (mail.tm)
+2. Đăng ký GetEduMail bằng hộp thư tạm
+3. Gửi OTP → đọc OTP temp
+4. Xác minh → claim địa chỉ edu
+5. Lưu mail/acc/
 ```
 
-Cách dùng hộp thư tạm giúp tránh giới hạn tạo hộp thư khách của GetEduMail. Hộp thư tạm chỉ dùng để nhận mã xác minh GetEduMail; địa chỉ edu sau khi claim mới là địa chỉ dùng cho bước đăng ký Grok.
-
-### 4.2. Trình đơn mail
-
-Mở trình đơn bằng một trong các lệnh:
+### 4.2. Lệnh
 
 ```powershell
 npm run edu
 .\edu-menu.bat
-```
-
-Trình đơn có các chức năng:
-
-| Lựa chọn | Chức năng |
-|---|---|
-| `1` | Tạo một địa chỉ edu |
-| `2` | Tạo nhiều địa chỉ edu |
-| `3` | Xem danh sách địa chỉ đã lưu |
-| `4` | Xem hộp thư gần nhất |
-| `5` | Đăng nhập lại địa chỉ gần nhất |
-| `9` | Sửa tên miền, tên và mật khẩu mặc định |
-| `0` | Thoát |
-
-### 4.3. Tạo mail bằng dòng lệnh
-
-```powershell
 npm run edu:create
 npm run edu:batch
-node mail/getedumail-auto.mjs --count 5
-node mail/getedumail-auto.mjs --domain iunp.edu.rs
 ```
 
-Bản thân `getedumail-auto.mjs` dùng `getedumail-core.mjs`; không cần mở trình duyệt.
+### 4.3. Kết quả
 
-### 4.4. Tạo mail bằng thư viện
+- `mail/acc/N.json`, `mail/acc/latest.json`
+- `mail/getedumail-latest.json`
 
-```powershell
-node --input-type=module -e "import { createAccount } from './mail/getedumail-core.mjs'; const a=await createAccount({domain:'iunp.edu.rs',log:console.log}); console.log(a.email)"
-```
-
-Thay `iunp.edu.rs` bằng tên miền còn hiển thị trong giao diện GetEduMail.
-
-`grok/reg-grok.mjs` tự gọi cùng hàm này khi không tìm thấy mail edu cũ chưa dùng.
-
-### 4.5. Tệp kết quả
-
-- `mail/acc/N.json`: tài khoản edu thứ `N`.
-- `mail/acc/latest.json`: tài khoản edu gần nhất.
-- `mail/getedumail-latest.json`: tệp tương thích cũ.
-- `mail/getedumail-api-test-last.json`: kết quả kiểm tra API nếu có chạy kiểm tra.
-
-Không chia sẻ các tệp này vì chúng có thể chứa mật khẩu, mã truy cập hoặc thông tin hộp thư.
-
-### 4.6. Cấu hình mail
-
-`mail/config.json`:
-
-```json
-{
-  "configSeen": false,
-  "domain": "iunp.edu.rs",
-  "name": "Alex Kowalski",
-  "password": "",
-  "openBrowserAfterCreate": false,
-  "randomName": true,
-  "proxy": ""
-}
-```
-
-| Khóa | Ý nghĩa |
-|---|---|
-| `domain` | Tên miền edu mặc định |
-| `name` | Họ tên dùng khi đăng ký GetEduMail |
-| `password` | Mật khẩu tài khoản GetEduMail |
-| `openBrowserAfterCreate` | Có mở trình duyệt sau khi tạo mail hay không |
-| `randomName` | Dùng tên ngẫu nhiên thay cho `name` |
-| `proxy` | Proxy nếu luồng mail cần dùng proxy |
+Chi tiết cấu hình: `mail/config.json` (domain, name, password, proxy…).
 
 ---
 
 ## 5. Phần Grok/xAI
 
-### 5.1. Luồng đăng ký một tài khoản
+### 5.1. Luồng đăng ký
 
 ```text
-1. Chọn tài khoản edu cũ chưa đăng ký Grok hoặc tạo tài khoản edu mới
-2. Xóa phiên xAI cũ nếu còn đăng nhập
-3. Mở trang đăng ký xAI
-4. Chọn đăng ký bằng email
-5. Điền địa chỉ edu
-6. Đọc OTP từ hộp thư GetEduMail
-7. Điền họ, tên và mật khẩu Grok
-8. Xử lý Cloudflare Turnstile
-9. Bấm Complete sign up
-10. Chờ rời khỏi trang sign-up
-11. Lưu kết quả
-12. Nếu bật 9router, xác thực device OAuth và giữ phiên đăng nhập
+1. Chọn / tạo mail edu
+2. Chrome USER + CDP (mặc định) hoặc Playwright
+3. Đăng ký xAI + OTP GetEduMail + Turnstile
+4. Lưu grok/acc/
+5. (Tuỳ chọn) 9router device OAuth
 ```
 
-Bước kiểm tra đăng nhập riêng đã được loại khỏi luồng chính. Đăng ký được xem là hoàn tất khi trang rời khỏi `sign-up` hoặc chuyển sang trang tài khoản/app.
-
-### 5.2. Lệnh đăng ký
+### 5.2. Lệnh
 
 ```powershell
 npm run grok:menu
 npm run grok:fresh
 npm run grok:reuse
 npm run grok:multi -- -n 5 -w 2
-npm run grok:multi -- -n 5 -w 3 --headless
 ```
 
-| Lệnh | Chức năng |
-|---|---|
-| `npm run grok:menu` | Mở trình đơn Grok |
-| `npm run grok:fresh` | Tạo mail edu mới rồi đăng ký Grok |
-| `npm run grok:reuse` | Dùng tài khoản edu gần nhất |
-| `npm run grok:multi -- -n 5 -w 2` | Chạy 5 lượt với 2 tác vụ song song |
-| `npm run grok:multi -- -n 5 -w 3 --headless` | Chạy 5 lượt, 3 tác vụ song song, ẩn trình duyệt |
+### 5.3. Trình duyệt
 
-Có thể gọi trực tiếp:
+- Mặc định: **Chrome user + CDP** (`--user-chrome`), proxy cấu hình **trong Chrome**.
+- Playwright / headless: dùng `config.proxy` / `proxies.txt`.
 
-```powershell
-node grok/reg-grok.mjs --fresh --user-chrome --yes
-node grok/reg-grok.mjs --reuse --user-chrome --yes
-node grok/reg-multi.mjs --count 5 --workers 2
-node grok/reg-multi.mjs --count 5 --workers 3 --headless
-```
+### 5.4. Kết quả
 
-### 5.3. Chạy nhiều luồng
+- `grok/acc/grok-ok-*.json`, `grok-results.jsonl`, `grok-latest.json`
 
-`grok/reg-multi.mjs` tạo các tiến trình con độc lập:
-
-```powershell
-node grok/reg-multi.mjs --count 10 --workers 3
-```
-
-- `--count`: tổng số lượt đăng ký.
-- `workers`: số tác vụ chạy song song, tối đa 8.
-- `--retries`: số lần thử lại cho mỗi lượt, tối đa 3.
-- `--headless`: chạy Playwright với trình duyệt ẩn.
-
-Khuyến nghị:
-
-- Chrome hiện: `workers` từ 1 đến 2.
-- Chế độ ẩn: `workers` từ 2 đến 4.
-- Không đặt số tác vụ quá cao vì xAI, GetEduMail, hộp thư tạm và proxy đều có giới hạn tốc độ.
-- Nhiều tác vụ dùng chung một proxy dễ làm tăng lỗi giới hạn hoặc bị từ chối.
-
-### 5.4. Cấu hình Grok
-
-`grok/config.json`:
-
-```json
-{
-  "configSeen": false,
-  "domain": "iunp.edu.rs",
-  "domains": [
-    "iunp.edu.rs",
-    "iitp.edu.rs",
-    "warsawuni.edu.pl"
-  ],
-  "headless": false,
-  "workers": 2,
-  "reuseUnusedEdu": true,
-  "autoClickCaptcha": true,
-  "name": "Alex Kowalski",
-  "password": "",
-  "openBrowserAfterCreate": false,
-  "randomName": true,
-  "proxy": "",
-  "nineRouter": {
-    "autoAuth": false,
-    "baseUrl": "http://127.0.0.1:20128",
-    "namePrefix": "edu-auto"
-  }
-}
-```
-
-| Khóa | Ý nghĩa |
-|---|---|
-| `domain` | Tên miền mặc định khi tạo edu |
-| `domains` | Danh sách tên miền được luân phiên khi thử tạo mail |
-| `headless` | `true` để ẩn trình duyệt; `false` để hiện Chrome người dùng |
-| `workers` | Số tác vụ mặc định cho đăng ký nhiều lượt |
-| `reuseUnusedEdu` | Dùng mail trong `mail/acc/` chưa xuất hiện trong kết quả Grok trước |
-| `autoClickCaptcha` | Tự click ô Cloudflare Turnstile khi có thể |
-| `name` | Tên mặc định khi tắt tên ngẫu nhiên |
-| `password` | Mật khẩu Grok cố định; để trống để dùng mật khẩu edu hoặc mật khẩu ngẫu nhiên |
-| `randomName` | Chọn tên ngẫu nhiên từ `mail/names.json` nếu tệp tồn tại |
-| `proxy` | Proxy mặc định cho Playwright |
-| `nineRouter.autoAuth` | Tự xác thực 9router sau khi đăng ký thành công |
-| `nineRouter.baseUrl` | Địa chỉ API cục bộ của 9router |
-| `nineRouter.namePrefix` | Tiền tố tên kết nối trong 9router |
-
-### 5.5. Tên miền edu
-
-Tên miền mặc định hiện tại là `iunp.edu.rs`. Danh sách `domains` chỉ nên chứa các tên miền đang thật sự xuất hiện trong giao diện GetEduMail và còn tạo được địa chỉ.
-
-Nếu một tên miền không còn trong giao diện hoặc trả lỗi liên tục:
-
-1. Xóa tên miền đó khỏi `domains`.
-2. Đặt tên miền đang hoạt động vào `domain`.
-3. Tắt hoặc giảm số tác vụ.
-4. Không cố thử liên tục khi dịch vụ đang giới hạn.
-
-### 5.6. Dùng lại mail edu cũ
-
-Khi `reuseUnusedEdu` là `true`, Grok kiểm tra các tệp trong `mail/acc/`, loại địa chỉ đã xuất hiện trong `grok/acc/grok-results.jsonl`, rồi ưu tiên dùng địa chỉ cũ chưa đăng ký Grok.
-
-Muốn luôn tạo mail mới:
-
-```json
-{
-  "reuseUnusedEdu": false
-}
-```
-
-Muốn dùng đúng tài khoản edu gần nhất:
-
-```powershell
-npm run grok:reuse
-```
+Chi tiết: `grok/config.json` (domains, workers, nineRouter, autoClickCaptcha…).
 
 ---
 
-## 6. Cloudflare Turnstile
+## 6. Phần ByesU (半页酥 API)
 
-Khi `autoClickCaptcha` là `true`, công cụ sẽ:
-
-1. Chờ widget Turnstile xuất hiện.
-2. Tìm iframe Cloudflare.
-3. Click vùng checkbox bên trái iframe.
-4. Thử locator trong iframe nếu click tọa độ không thành công.
-5. Kiểm tra token và trạng thái xác minh với chu kỳ ngắn.
-6. Thử lại sau khi widget báo lỗi.
-7. Bấm `Complete sign up` sau khi captcha được xác nhận.
-
-Tắt tự click:
-
-```json
-{
-  "autoClickCaptcha": false
-}
-```
-
-Khi tắt, cần tự xử lý captcha trên trình duyệt hiện ra. Không phải mọi thử thách Cloudflare đều có thể tự click; thử thách hình ảnh hoặc xác minh bổ sung cần thao tác thủ công.
-
----
-
-## 7. Chế độ trình duyệt
-
-### 7.1. Hiện trình duyệt
-
-Mặc định `headless` là `false`. Công cụ tự khởi chạy hoặc gắn vào Chrome người dùng qua CDP cổng `9222` khi cần.
-
-```powershell
-npm run grok:fresh
-```
-
-Nếu Chrome đang chạy mà không gắn được CDP, đóng Chrome rồi chạy lại lệnh trên để công cụ khởi tạo phiên sạch.
-
-### 7.2. Ẩn trình duyệt
-
-Đặt trong `grok/config.json`:
-
-```json
-{
-  "headless": true
-}
-```
-
-Hoặc chỉ áp dụng cho một lần:
-
-```powershell
-node grok/reg-multi.mjs --count 5 --workers 3 --headless
-```
-
-Chế độ ẩn dùng Playwright, không dùng phiên Chrome người dùng qua CDP. Vì vậy trạng thái đăng nhập cũ của Chrome người dùng không được dùng lại.
-
----
-
-## 8. 9router
-
-### 8.1. Điều kiện
-
-- Ứng dụng 9router đang chạy.
-- API mặc định ở `http://127.0.0.1:20128`.
-- Có tệp khóa cục bộ trong thư mục dữ liệu 9router.
-- Tài khoản đã đăng ký thành công và còn phiên xAI.
-
-Bật trong `grok/config.json`:
-
-```json
-{
-  "nineRouter": {
-    "autoAuth": true,
-    "baseUrl": "http://127.0.0.1:20128",
-    "namePrefix": "edu-auto"
-  }
-}
-```
-
-### 8.2. Kiểm tra 9router
-
-```powershell
-npm run 9r:ping
-```
-
-### 8.3. Xác thực thủ công
-
-```powershell
-npm run 9r:device
-```
-
-Luồng đúng dùng nhà cung cấp `grok-cli`:
+### 6.1. Luồng auto reg
 
 ```text
-1. 9router tạo device code
-2. Mở URL xác thực xAI
-3. Continue và đăng nhập nếu cần
-4. Bấm Allow
-5. 9router tự poll trạng thái
-6. 9router tạo kết nối OAuth trong danh sách Grok Build
+1. Xóa cookie / session ByesU cũ
+2. Tạo email tạm (tempmail.lol — domain xoay, không mail.tm)
+3. Mở Chrome CDP (visible) → https://byesu.com/sign-up
+4. Điền username / password / email + tick legal
+5. Chờ Cloudflare Turnstile (token len > 20) rồi Send code
+6. Poll OTP (hex 6 ký tự, ví dụ b263a0)
+7. Create account
+8. Login (bấm Sign in UI, chờ SPA → dashboard)
+9. Vào /keys → tạo API key theo group (Grok, Claude Max, …)
+10. Lưu acc JSON + append key vào keys/
+11. Logout + wipe cookie (không quay form sign-up)
 ```
 
-Không dùng đường dẫn `xai/exchange` để đẩy JWT tùy ý. Cách đó có thể tạo kết nối `xai` dạng `access_token`, tên `Account N`, không có email và không phải kết nối Grok Build mong muốn.
+Group chỉ cho phép:
 
-Sau khi 9router xác thực thành công, công cụ giữ cookie phiên xAI và không logout. Nếu tắt `autoAuth`, công cụ sẽ xử lý logout và xóa dữ liệu phiên theo luồng thông thường.
+| Group | File key |
+|---|---|
+| Openai Codex | `keys/api key openai codex.txt` |
+| Grok | `keys/api key grok.txt` |
+| Gemini Business | `keys/api key gemini business.txt` |
+| Claude Max | `keys/api key claude max.txt` |
+
+Mỗi file: **một dòng một `sk-…`**, tự append sau mỗi lượt reg thành công.
+
+### 6.2. Lệnh
+
+```powershell
+npm run byesu:menu
+.\byesu-menu.bat
+npm run byesu
+npm run byesu -- --group Grok
+npm run byesu -- --group "Claude Max"
+npm run byesu -- --group 1
+npm run byesu:multi
+npm run byesu:pw
+npm run byesu:headless
+```
+
+| Lệnh / flag | Ý nghĩa |
+|---|---|
+| `npm run byesu` | 1 lượt (Playwright + proxy xoay nếu có `proxies.txt`) |
+| `npm run byesu:multi -- -n 6 -w 3` | Multi song song: 6 job, 3 workers |
+| `--group` | `Grok` / `Claude Max` / … hoặc `1`–`4` |
+| `--count` / `-n` | Số lượt (reg-multi) |
+| `--workers` / `-w` | Số worker song song (≤ số proxy, tối đa 6) |
+| `--retries` | Retry mỗi job khi fail |
+| `--stagger` | ms trễ giữa worker start (mặc định 2500) |
+| `--headless` | Headless Playwright |
+| `--cdp` | Ép Chrome CDP (proxy set tay trong profile) |
+| `--yes` | Không hỏi xác nhận |
+| `--otp` | Dán OTP tay |
+| `--no-proxy` | Tắt proxy |
+
+**Multi reg (nhanh, tránh 429):**
+
+```powershell
+# 6 acc, 3 luồng, group Grok — mỗi job 1 proxy từ byesu/proxies.txt
+npm run byesu:multi -- -n 6 -w 3 --group Grok
+
+# khuyến nghị: workers ≤ số proxy; stagger 2–3s
+npm run byesu:multi -- -n 10 -w 4 --group "Claude Max" --stagger 3000
+```
+
+**Test keys song song:**
+
+```powershell
+npm run byesu:test-keys
+npm run byesu:test-keys -- -w 8
+npm run byesu:test-keys -- --group grok -w 6
+```
+
+Trình đơn `byesu-menu`:
+
+1. Auto reg 1 acc  
+2. Auto reg nhiều lượt  
+3. Tampermonkey userscript  
+4. CDP mở Chrome + nạp helper  
+
+### 6.3. Cấu hình `byesu/config.json`
+
+```json
+{
+  "headless": false,
+  "autoClickCaptcha": true,
+  "password": "",
+  "proxy": "",
+  "byesu": {
+    "group": "Grok",
+    "keyName": "",
+    "groupsAllowed": [
+      "Openai Codex",
+      "Grok",
+      "Gemini Business",
+      "Claude Max"
+    ]
+  }
+}
+```
+
+- `group`: group mặc định khi tạo API key.
+- `keyName`: tên key trên ByesU (trống = dùng username).
+- `autoClickCaptcha`: `false` = tự giải captcha tay, script chỉ poll token.
+- `proxy`: proxy cố định (tuỳ chọn). Khuyến nghị dùng danh sách `byesu/proxies.txt`.
+- **CDP (`--cdp`):** proxy trong Chrome profile (`.pw-byesu-profile`), không nhét `user:pass` vào flag.
+- **429 mà không có proxy:** bật VPN đổi IP rồi chạy lại (xem mục lỗi 429).
+
+### 6.4. Kết quả
+
+```text
+byesu/acc/
+  byesu-ok-<timestamp>.json    username, email, password, apiKey, group
+  byesu-fail-*.json
+  byesu-latest.json
+  byesu-results.jsonl
+byesu/keys/
+  api key grok.txt
+  api key claude max.txt
+  api key openai codex.txt
+  api key gemini business.txt
+```
+
+### 6.5. Lưu ý ByesU
+
+- Có `byesu/proxies.txt`: mặc định **Playwright + proxy xoay** (chống 429). Không proxy: IP nhà dễ 429 → **bật VPN** hoặc thêm proxy.
+- `--cdp`: Chrome visible, proxy set tay trong profile.
+- Captcha: quét đến khi có token, **không bấm Send / Create / Sign in sớm**.
+- Login: bấm nút **Sign in** trên UI (set cookie); không `goto` giữa chừng làm mất form.
+- Sau login: chờ **dashboard** (pathname `/dashboard`, không tin `sign-in?redirect=%2Fdashboard`) rồi mới `/keys`.
+- OTP: hex 6 ký tự từ tempmail.lol; provider không còn mail.tm.
+- Đầu/cuối lượt: wipe cookie ByesU (không loop lại form sign-up khi cleanup).
+- Test key: `npm run byesu:test-keys` — hết quota/invalid xóa khỏi `keys/`, chuyển `keys/dead/`.
+
+---
+
+## 7. Trình đơn tổng
+
+```powershell
+node menu.mjs
+```
+
+| Phím | Mục |
+|---|---|
+| 1 | Mail edu |
+| 2 | Reg Grok |
+| 3 | ByesU auto reg |
+| 0 | Thoát |
+
+---
+
+## 8. Cloudflare Turnstile
+
+Dùng chung `grok/turnstile.mjs`.
+
+- `autoClickCaptcha: true`: tự click checkbox + poll token.
+- `false`: xử lý tay; script chờ token (tối đa `--captcha-timeout`).
+
+Thử thách hình ảnh có thể cần thao tác thủ công.
 
 ---
 
 ## 9. Proxy
 
-Kiểm tra proxy:
-
 ```powershell
 npm run proxy:test
-```
-
-Chọn proxy:
-
-```powershell
 npm run proxy:pick
 ```
 
-Định dạng proxy:
+Định dạng: `host:port:user:password` trong `grok/proxies.txt`.
 
-```text
-host:port:user:password
+- Grok/ByesU **CDP user Chrome**: proxy trong Chrome, không qua flag Playwright.
+- Playwright/headless: `config.proxy` hoặc `--proxy`.
+
+---
+
+## 10. 9router (Grok)
+
+```powershell
+npm run 9r:ping
+npm run 9r:device
 ```
 
-Danh sách cục bộ đặt trong `grok/proxies.txt`. Tệp này có thể chứa thông tin đăng nhập proxy nên đã bị loại khỏi Git.
-
-Khuyến nghị:
-
-- Kiểm tra proxy trước khi chạy nhiều tác vụ.
-- Không dùng cùng một proxy cho quá nhiều tác vụ.
-- Không ghi mật khẩu proxy vào `config.example.json`.
-- Nếu Chrome người dùng đã có proxy, cấu hình proxy trong Chrome thay vì truyền lại cho Playwright.
+Bật `nineRouter.autoAuth` trong `grok/config.json` sau khi reg Grok thành công.
 
 ---
 
-## 10. Kết quả và nhật ký
-
-Kết quả Grok được lưu cục bộ trong `grok/acc/`:
-
-- `grok-latest.json`: kết quả gần nhất.
-- `grok-results.jsonl`: mỗi lượt một dòng JSON.
-- `grok-ok-*.json`: bản ghi lượt thành công.
-- `grok-unknown-*.json`: bản ghi trạng thái chưa xác định.
-- `xai-oauth-latest.json`: bản sao dữ liệu liên quan đến 9router nếu có.
-
-Kết quả mail được lưu trong `mail/acc/`:
-
-- `N.json`: từng tài khoản edu.
-- `latest.json`: tài khoản edu gần nhất.
-
-Không sửa hoặc xóa kết quả khi một tác vụ khác vẫn đang chạy. Đặc biệt, nhiều tác vụ cùng cập nhật tệp `latest.json` có thể làm tài khoản gần nhất thay đổi theo thứ tự hoàn thành.
-
----
-
-## 11. Mã thoát
+## 11. Mã thoát (Grok / ByesU)
 
 | Mã | Ý nghĩa |
 |---:|---|
-| `0` | Đăng ký thành công |
-| `2` | Lỗi luồng hoặc đăng ký chưa hoàn tất |
-| `7` | Tài khoản bị khóa hoặc đình chỉ |
-| `8` | Mật khẩu không đúng trong luồng kiểm tra cũ |
-| `9` | Email không tồn tại trong luồng kiểm tra cũ |
-
-Luồng hiện tại không chạy bước kiểm tra đăng nhập riêng sau đăng ký. Trạng thái thành công dựa trên việc hoàn tất đăng ký và rời trang `sign-up`.
+| 0 | Thành công |
+| 1 | Lỗi chạy script |
+| 2 | Một hoặc nhiều lượt fail |
 
 ---
 
 ## 12. Xử lý lỗi thường gặp
 
-### `Max number of temporary email accounts are exceeded`
+### ByesU: HTTP 429 / rate limit
 
-- Giảm số tác vụ.
-- Chờ trước khi thử lại.
-- Kiểm tra dịch vụ hộp thư tạm.
-- Không tạo quá nhiều tài khoản đồng thời.
+- IP hiện tại bị giới hạn tần suất (Send code / reg / login).
+- **Có proxy:** điền `byesu/proxies.txt` (`host:port:user:pass`), chạy `npm run byesu` — script dùng Playwright + xoay proxy, 429 tự đổi proxy rồi retry.
+- **Không có proxy:** bật **VPN** (đổi IP), tắt VPN cũ / đổi server VPN, chờ vài phút rồi chạy lại. VPN và proxy không bắt buộc cùng lúc; ưu tiên proxy list nếu reg nhiều lượt.
+- Giảm tốc: `--count 1`, chờ giữa các lượt; tránh spam reg liên tục cùng IP.
+- CDP (`--cdp`) không gắn được proxy `user:pass` bằng flag — hoặc set proxy trong Chrome, hoặc dùng mặc định Playwright + `proxies.txt`.
 
-### `guest 400`
+### ByesU: `inbox=0` OTP timeout
 
-Luồng hiện tại ưu tiên mail tạm để đăng ký GetEduMail rồi nhận quyền sở hữu địa chỉ edu, nhằm tránh giới hạn hộp thư khách. Kiểm tra kết nối tới `api.mail.tm` và mã OTP trong hộp thư tạm.
+- Kiểm tra `API /verification success=true`.
+- Domain tempmail.lol có thể bị chặn; thử lại (domain xoay).
+- Dán tay: `--otp b263a0`.
 
-### `OTP timeout`
+### ByesU: `ERR_NO_SUPPORTED_PROXIES`
 
-- Kiểm tra token GetEduMail.
-- Kiểm tra hộp thư tạm có nhận thư hay không.
-- Chờ thêm rồi thử lại.
-- Không dùng lại địa chỉ đã claim hoặc đã hết hạn.
+- CDP không hỗ trợ `user:pass` trong `--proxy-server`.
+- Đặt proxy trong Chrome profile ByesU, hoặc dùng Playwright với `byesu/proxies.txt` / `config.proxy`.
 
-### `step=unknown` hoặc không thấy biểu mẫu email
+### ByesU: login xong vẫn `sign-in?redirect=%2Fdashboard`
 
-- Đảm bảo Chrome không bị phiên cũ chặn khi công cụ chuẩn bị CDP.
-- Đóng Chrome rồi chạy lại `npm run grok:fresh` để công cụ tạo phiên sạch.
-- Xóa phiên xAI cũ theo luồng đăng xuất.
-- Thử `--headless --playwright` để tách khỏi phiên Chrome hiện tại.
+- Cookie session chưa dính; script ưu tiên bấm Sign in UI và chờ pathname `/dashboard`.
+- Không reload form khi captcha/login.
+
+### Grok: OTP timeout / guest 400
+
+- Xem README mục mail; giảm workers; kiểm tra GetEduMail token.
 
 ### Cloudflare không tự click
 
-- Đặt `autoClickCaptcha` thành `false` và xử lý thủ công.
-- Dùng trình duyệt hiện thay vì headless.
-- Kiểm tra kích thước và vị trí iframe.
-- Không bấm liên tục; Cloudflare có thể thay widget sau mỗi lần thử.
-
-### `403 Access denied` từ xAI
-
-Đây thường là từ chối phía xAI đối với tài khoản, tên miền, địa chỉ IP hoặc kết nối OAuth; không đồng nghĩa với lỗi điền mật khẩu. Hãy:
-
-1. Dừng thử lại liên tục.
-2. Giảm số tác vụ và đổi proxy hợp lệ nếu cần.
-3. Kiểm tra tên miền còn hoạt động trên GetEduMail.
-4. Tắt 9router để xác định lỗi nằm ở đăng ký hay bước OAuth.
-5. Không đưa tài khoản bị từ chối vào danh sách retry vô hạn.
-
-### 9router tạo `Account N` hoặc email trống
-
-Kiểm tra nhà cung cấp là `grok-cli`, không phải `xai`. Chạy:
-
-```powershell
-npm run 9r:ping
-```
-
-Sau đó dùng lại device OAuth qua:
-
-```powershell
-npm run 9r:device
-```
-
-### Lỗi thiếu module
-
-Đảm bảo đang chạy tại thư mục gốc và đã cài phụ thuộc:
-
-```powershell
-npm install
-```
-
-Không tách riêng `grok/` khỏi `mail/` vì `grok/reg-grok.mjs` nhập thư viện từ `mail/getedumail-core.mjs`.
+- `autoClickCaptcha: false`, xử lý tay.
+- Dùng Chrome visible, không headless.
 
 ---
 
 ## 13. Bảo mật
 
-Không đưa các tệp sau lên Git hoặc gửi cho người khác:
+Không đưa lên Git hoặc chia sẻ:
 
-- `grok/config.json`.
-- `mail/config.json`.
-- `grok/proxies.txt`.
-- `grok/acc/`.
-- `mail/acc/`.
-- `xai-oauth*.json`.
-- `getedumail-latest.json`.
-- Hồ sơ trình duyệt `.pw-*`.
-- Mật khẩu, cookie, token, khóa proxy và khóa API.
-
-Các tệp mẫu chỉ chứa giá trị minh họa. Nếu một khóa hoặc mật khẩu đã lỡ đưa lên Git, hãy đổi hoặc thu hồi ngay tại dịch vụ tương ứng.
+- `mail/config.json`, `grok/config.json`, `byesu/config.json`
+- `grok/proxies.txt`
+- `mail/acc/`, `grok/acc/`, `byesu/acc/`, `byesu/keys/`
+- `xai-oauth*.json`, `getedumail-latest.json`
+- Hồ sơ `.pw-*`
+- Mật khẩu, cookie, token, API key, proxy auth
 
 ---
 
-## 14. Ghi chú phát triển
-
-Kiểm tra cú pháp các tệp JavaScript:
+## 14. Kiểm tra nhanh
 
 ```powershell
-node --check grok/grok-menu.mjs
-node --check grok/nine-router-auth.mjs
-node --check grok/proxy.mjs
-node --check grok/reg-grok.mjs
-node --check grok/reg-multi.mjs
-node --check grok/turnstile.mjs
 node --check mail/getedumail-core.mjs
+node --check grok/reg-grok.mjs
+node --check grok/turnstile.mjs
+node --check byesu/reg-byesu.mjs
+node --check byesu/tempmail.mjs
+node --check byesu/byesu-menu.mjs
 ```
-
-Kiểm tra JSON:
 
 ```powershell
-node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); JSON.parse(require('fs').readFileSync('grok/config.example.json','utf8')); JSON.parse(require('fs').readFileSync('mail/config.example.json','utf8')); console.log('JSON hợp lệ')"
+node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); JSON.parse(require('fs').readFileSync('byesu/config.example.json','utf8')); console.log('JSON OK')"
 ```
 
-Mọi thay đổi cần giữ nguyên các nguyên tắc:
+Nguyên tắc:
 
-- Không ghi khóa bí mật vào mã nguồn.
-- Không lưu tài khoản thật trong tệp mẫu.
-- Không retry vô hạn đối với lỗi giới hạn hoặc `403`.
-- Giữ `mail/` và `grok/` đồng cấp.
-- Ưu tiên chạy ít tác vụ và xác minh từng bước trước khi tăng tải.
+- Không ghi secret vào mã nguồn / file mẫu.
+- Không retry vô hạn với rate limit / 403.
+- Giữ `mail/`, `grok/`, `byesu/` đồng cấp.
+- Ưu tiên ít tác vụ, CDP visible cho ByesU/Grok khi bị chặn bot.
