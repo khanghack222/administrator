@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { spawn } from "child_process";
 import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { chromium } from "playwright";
 import {
   createAccount,
   listAccFiles,
@@ -20,14 +20,21 @@ const flag = (name, fallback = null) => {
 };
 const count = Math.max(1, parseInt(flag("--count", "1"), 10) || 1);
 const WEB_LOGIN_URL = "https://getedumail.com/login";
+const PROFILE_DIR = join(__dir, ".pw-getedumail");
 
-function openBrowser(url) {
-  const command = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
-  spawn(command, process.platform === "win32" ? ["", url] : [url], {
-    detached: true,
-    stdio: "ignore",
-    shell: process.platform === "win32",
-  }).unref();
+async function openLoggedInBrowser(email, password) {
+  const context = await chromium.launchPersistentContext(PROFILE_DIR, {
+    channel: "chrome",
+    headless: false,
+  });
+  const page = context.pages()[0] || await context.newPage();
+  await page.goto(WEB_LOGIN_URL, { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Email Address").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await Promise.all([
+    page.waitForURL("**/mail/inbox", { timeout: 30_000 }),
+    page.getByRole("button", { name: "Sign In" }).click(),
+  ]);
 }
 const cfgPath = join(__dir, "config.json");
 const examplePath = join(__dir, "config.example.json");
@@ -58,8 +65,8 @@ async function main() {
     const token = await resolveToken({ ...latest, loginEmail, userToken: null });
     if (!token) throw new Error("Đăng nhập GetEduMail thất bại: server không trả userToken");
     console.log(`Đăng nhập API thành công: ${loginEmail}`);
-    openBrowser(WEB_LOGIN_URL);
-    console.log(`Đã mở trình duyệt: ${WEB_LOGIN_URL}`);
+    await openLoggedInBrowser(loginEmail, latest.password);
+    console.log("Đã mở trình duyệt và đăng nhập GetEduMail.");
     return;
   }
 
